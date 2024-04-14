@@ -9,7 +9,7 @@ local thisCharacter
 local thisCharacterWeekly
 local thisCharacterDungeons
 
-local TableConcat, TableInsert, TableSort, format = table.concat, table.insert, table.sort, format
+local TableConcat, TableInsert, TableSort, format, floor, ceil = table.concat, table.insert, table.sort, format, floor, ceil
 local UnitHealthMax, UnitPowerType, UnitPowerMax, GetPVPLifetimeStats = UnitHealthMax, UnitPowerType, UnitPowerMax, GetPVPLifetimeStats
 local UnitStat, UnitArmor, UnitDamage, UnitAttackSpeed, UnitAttackPower = UnitStat, UnitArmor, UnitDamage, UnitAttackSpeed, UnitAttackPower
 local GetCombatRating, GetCritChance, GetExpertise, GetSpellBonusDamage, GetSpellBonusHealing, GetSpellCritChance, GetManaRegen = GetCombatRating, GetCritChance, GetExpertise, GetSpellBonusDamage, GetSpellBonusHealing, GetSpellCritChance, GetManaRegen
@@ -241,7 +241,7 @@ local function ScanRunHistory()
 end
 
 DataStore:OnAddonLoaded(addonName, function() 
-	DataStore:RegisterNewModule({
+	DataStore:RegisterModule({
 		addon = addon,
 		addonName = addonName,
 		characterTables = {
