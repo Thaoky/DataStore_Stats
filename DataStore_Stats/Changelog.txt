@@ -2,6 +2,11 @@ DataStore Changelog (dates in dd/mm/yyyy)
 ===================
 
 
+Version 2024.09.15 (15/09/2024)
+
+- ToC Update.
+- Fixed a lua error when doing a /reload or visiting the Great Vault (Thanks GovtGeek !).
+
 Version 2024.08.14 (14/08/2024)
 
 - ToC Update.

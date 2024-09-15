@@ -174,10 +174,11 @@ local function ScanMythicPlusBestForMapInfo()
 	char.lastUpdate = time()
 end
 
-local rewardFields = { "MythicPlusReward", "RankedPvPReward", "RaidReward" }
+-- https://warcraft.wiki.gg/wiki/API_C_WeeklyRewards.GetActivityEncounterInfo
+local rewardFields = { "ActivitiesReward", "RankedPvPReward", "RaidReward", "AlsoReceiveReward", "ConcessionReward", "WorldReward" }
 
 local function ScanRewardType(rewardType)
-	-- https://wowpedia.fandom.com/wiki/API_C_WeeklyRewards.GetActivities
+	-- https://warcraft.wiki.gg/wiki/API_C_WeeklyRewards.GetActivities
 	local activities = C_WeeklyRewards.GetActivities(rewardType)
 	
 	for _, activity in pairs(activities) do
@@ -269,11 +270,23 @@ DataStore:OnAddonLoaded(addonName, function()
 				GetWeeklyMythicPlusReward = function(character)
 					return character.MythicPlusReward
 				end,
+				GetWeeklyActivitiesReward = function(character)
+					return character.ActivitiesReward
+				end,
 				GetWeeklyRankedPvPReward = function(character)
 					return character.RankedPvPReward
 				end,
 				GetWeeklyRaidReward = function(character)
 					return character.RaidReward
+				end,
+				GetWeeklyAlsoReceiveReward = function(character)
+					return character.AlsoReceiveReward
+				end,
+				GetWeeklyConcessionReward = function(character)
+					return character.ConcessionReward
+				end,
+				GetWeeklyWorldReward = function(character)
+					return character.WorldReward
 				end,
 				GetWeeklyTop10Runs = function(character)
 					return character.RunHistoryTop10
@@ -302,7 +315,7 @@ DataStore:OnAddonLoaded(addonName, function()
 	})
 
 	thisCharacter = DataStore:GetCharacterDB("DataStore_Stats_Characters", true)
-	thisCharacterWeekly = DataStore:GetCharacterDB("DataStore_Stats_Weekly")
+	thisCharacterWeekly = DataStore:GetCharacterDB("DataStore_Stats_Weekly", true)
 	thisCharacterDungeons = DataStore:GetCharacterDB("DataStore_Stats_Dungeons")
 end)
 
@@ -323,16 +336,22 @@ DataStore:OnPlayerLogin(function()
 	addon:ListenTo("CHALLENGE_MODE_MAPS_UPDATE", ScanMythicPlusBestForMapInfo)
 	addon:ListenTo("PLAYER_INTERACTION_MANAGER_FRAME_SHOW", function(event, interactionType)
 		if interactionType == Enum.PlayerInteractionType.WeeklyRewards then
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Raid)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.MythicPlus)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Activities)
 			ScanRewardType(Enum.WeeklyRewardChestThresholdType.RankedPvP)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Raid)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.AlsoReceive)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Concession)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.World)
 		end
 	end)	
 	addon:ListenTo("PLAYER_ENTERING_WORLD", function(event, isLogin, isReload)
 		if isLogin or isReload then
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Raid)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.MythicPlus)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Activities)
 			ScanRewardType(Enum.WeeklyRewardChestThresholdType.RankedPvP)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Raid)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.AlsoReceive)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Concession)
+			ScanRewardType(Enum.WeeklyRewardChestThresholdType.World)
 		end
 	end)
 end)
