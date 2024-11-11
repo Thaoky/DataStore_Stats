@@ -6,8 +6,6 @@ if not DataStore then return end
 
 local addonName, addon = ...
 local thisCharacter
-local thisCharacterWeekly
-local thisCharacterDungeons
 
 local TableConcat, TableInsert, TableSort, format, floor, ceil = table.concat, table.insert, table.sort, format, floor, ceil
 local UnitHealthMax, UnitPowerType, UnitPowerMax, GetPVPLifetimeStats = UnitHealthMax, UnitPowerType, UnitPowerMax, GetPVPLifetimeStats
@@ -103,10 +101,29 @@ local function ScanStats()
 	thisCharacter.lastUpdate = time()
 end
 
+local function GetWeekliesTable()
+	local id = DataStore:GetCharacterID(DataStore.ThisCharKey)
+	DataStore_Stats_Weekly[id] = DataStore_Stats_Weekly[id] or {}
+		
+	return DataStore_Stats_Weekly[id]
+end
+
+local function GetDungeonsTable()
+	local id = DataStore:GetCharacterID(DataStore.ThisCharKey)
+	DataStore_Stats_Dungeons[id] = DataStore_Stats_Dungeons[id] or {}
+		
+	return DataStore_Stats_Dungeons[id]
+end
+
+local function GetDungeonMapTable(mapID)
+	local dungeons = GetDungeonsTable()
+	dungeons[mapID] = dungeons[mapID] or {}
+	
+	return dungeons[mapID]
+end
+
 local function ScanMythicPlusBestForMapInfo()
 	local char = thisCharacter
-	thisCharacterDungeons = thisCharacterDungeons or {}
-	local dungeons = thisCharacterDungeons
 	
 	-- Get the dungeons
 	local maps = C_ChallengeMode.GetMapTable()
@@ -126,8 +143,7 @@ local function ScanMythicPlusBestForMapInfo()
 		
 		if level then
 			-- save this map's info
-			dungeons[mapID] = dungeons[mapID] or {}
-			local info = dungeons[mapID]
+			local info = GetDungeonMapTable(mapID)
 			
 			info.weeklyBestLevel = level
 			info.weeklyBestTimeInSeconds = durationSec
@@ -143,16 +159,14 @@ local function ScanMythicPlusBestForMapInfo()
 		-- Season Best
 		local intimeInfo, overtimeInfo = C_MythicPlus.GetSeasonBestForMap(mapID)
 		if intimeInfo and intimeInfo.level then
-			dungeons[mapID] = dungeons[mapID] or {}
-			local info = dungeons[mapID]
+			local info = GetDungeonMapTable(mapID)
 		
 			info.seasonBestLevel = intimeInfo.level
 			info.seasonBestTimeInSeconds = intimeInfo.durationSec
 		end
 		
 		if overtimeInfo and overtimeInfo.level then
-			dungeons[mapID] = dungeons[mapID] or {}
-			local info = dungeons[mapID]
+			local info = GetDungeonMapTable(mapID)
 
 			info.seasonBestOvertimeLevel = overtimeInfo.level
 			info.seasonBestOvertimeTimeInSeconds = overtimeInfo.durationSec			
@@ -162,8 +176,7 @@ local function ScanMythicPlusBestForMapInfo()
 	-- Save the best map info
 	if bestMapID then
 		local name = C_ChallengeMode.GetMapUIInfo(bestMapID)
-		thisCharacterWeekly = thisCharacterWeekly or {}
-		local weeklies = thisCharacterWeekly
+		local weeklies = GetWeekliesTable()
 		
 		weeklies.BestKeystoneName = name
 		weeklies.BestKeystoneLevel = bestLevel
@@ -187,10 +200,22 @@ local function ScanRewardType(rewardType)
 		if activity.index == 3 then
 		
 			-- ex: char.MythicPlusReward = progress
-			thisCharacterWeekly = thisCharacterWeekly or {}
-			thisCharacterWeekly[rewardFields[activity.type]] = activity.progress
+			local weeklies = GetWeekliesTable()
+
+			weeklies[rewardFields[activity.type]] = activity.progress
 		end
 	end
+end
+
+local function ScanRewards()
+	local e = Enum.WeeklyRewardChestThresholdType
+	
+	ScanRewardType(e.Activities)
+	ScanRewardType(e.RankedPvP)
+	ScanRewardType(e.Raid)
+	ScanRewardType(e.AlsoReceive)
+	ScanRewardType(e.Concession)
+	ScanRewardType(e.World)
 end
 
 local function ScanRunHistory()
@@ -200,8 +225,7 @@ local function ScanRunHistory()
 	local runs = C_MythicPlus.GetRunHistory(includePreviousWeeks, includeIncompleteRuns)
 	if not runs or #runs == 0 then return end		-- no runs ? exit
 	
-	thisCharacterDungeons = thisCharacterDungeons or {}
-	local dungeons = thisCharacterDungeons
+	local dungeons = GetDungeonsTable()
 	local top10 = {}
 	
 	-- clear the run history from previous scans
@@ -214,8 +238,7 @@ local function ScanRunHistory()
 	-- loop through runs
 	for i, runInfo in pairs(runs) do
 		local mapID = runInfo.mapChallengeModeID
-		dungeons[mapID] = dungeons[mapID] or {}
-		local info = dungeons[mapID]
+		local info = GetDungeonMapTable(mapID)
 
 		-- Make room for the run history
 		info.weeklyRunHistory = info.weeklyRunHistory or {}		-- Create if it does not exist yet
@@ -237,8 +260,8 @@ local function ScanRunHistory()
 	-- Sort the top 10 runs by level, descending
 	TableSort(top10, SortByLevelDesc)
 
-	thisCharacterWeekly = thisCharacterWeekly or {}	
-	thisCharacterWeekly.RunHistoryTop10 = top10
+	local weeklies = GetWeekliesTable()
+	weeklies.RunHistoryTop10 = top10
 end
 
 DataStore:OnAddonLoaded(addonName, function() 
@@ -297,14 +320,16 @@ DataStore:OnAddonLoaded(addonName, function()
 					return character
 				end,
 				GetWeeklyRunHistory = function(character, mapID)
-					local info = character.Dungeons[mapID]
+					-- local info = character.Dungeons[mapID]
+					local info = character[mapID]
 					
 					if info then
 						return info.weeklyRunHistory
 					end
 				end,
 				GetWeeklyBestByDungeon = function(character, mapID)
-					local info = character.Dungeons[mapID]
+					-- local info = character.Dungeons[mapID]
+					local info = character[mapID]
 					
 					if info then
 						return info.weeklyBestLevel
@@ -315,8 +340,6 @@ DataStore:OnAddonLoaded(addonName, function()
 	})
 
 	thisCharacter = DataStore:GetCharacterDB("DataStore_Stats_Characters", true)
-	thisCharacterWeekly = DataStore:GetCharacterDB("DataStore_Stats_Weekly", true)
-	thisCharacterDungeons = DataStore:GetCharacterDB("DataStore_Stats_Dungeons")
 end)
 
 DataStore:OnPlayerLogin(function() 
@@ -332,26 +355,20 @@ DataStore:OnPlayerLogin(function()
 		ScanRunHistory()
 	end)
 	addon:ListenTo("UNIT_INVENTORY_CHANGED", ScanStats)
-	addon:ListenTo("WEEKLY_REWARDS_UPDATE", ScanMythicPlusBestForMapInfo)
+	addon:ListenTo("WEEKLY_REWARDS_UPDATE", function() 
+		ScanRewards()
+		ScanMythicPlusBestForMapInfo()
+	end)
+	
 	addon:ListenTo("CHALLENGE_MODE_MAPS_UPDATE", ScanMythicPlusBestForMapInfo)
 	addon:ListenTo("PLAYER_INTERACTION_MANAGER_FRAME_SHOW", function(event, interactionType)
 		if interactionType == Enum.PlayerInteractionType.WeeklyRewards then
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Activities)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.RankedPvP)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Raid)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.AlsoReceive)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Concession)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.World)
+			ScanRewards()
 		end
 	end)	
 	addon:ListenTo("PLAYER_ENTERING_WORLD", function(event, isLogin, isReload)
 		if isLogin or isReload then
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Activities)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.RankedPvP)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Raid)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.AlsoReceive)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.Concession)
-			ScanRewardType(Enum.WeeklyRewardChestThresholdType.World)
+			ScanRewards()
 		end
 	end)
 end)
