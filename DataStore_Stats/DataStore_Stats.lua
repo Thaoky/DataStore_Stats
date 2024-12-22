@@ -98,6 +98,7 @@ local function ScanStats()
 	end
 	--]]
 	
+	thisCharacter.hasRewards = C_WeeklyRewards.HasAvailableRewards()
 	thisCharacter.lastUpdate = time()
 end
 
@@ -216,6 +217,8 @@ local function ScanRewards()
 	ScanRewardType(e.AlsoReceive)
 	ScanRewardType(e.Concession)
 	ScanRewardType(e.World)
+	
+	thisCharacter.hasRewards = C_WeeklyRewards.HasAvailableRewards()
 end
 
 local function ScanRunHistory()
@@ -264,7 +267,14 @@ local function ScanRunHistory()
 	weeklies.RunHistoryTop10 = top10
 end
 
-DataStore:OnAddonLoaded(addonName, function() 
+local function ClearAvailableRewards()
+	-- for k, char in pairs(DataStore_Stats_Characters) do
+		-- if type(char.hasRewards) == "boolean" and char.hasRewards == false then
+		-- end
+	-- end
+end
+
+AddonFactory:OnAddonLoaded(addonName, function() 
 	DataStore:RegisterModule({
 		addon = addon,
 		addonName = addonName,
@@ -278,6 +288,9 @@ DataStore:OnAddonLoaded(addonName, function()
 				end,
 				GetDungeonScore = function(character)
 					return character.dungeonScore
+				end,
+				HasAvailableRewards = function(character)
+					return character.hasRewards
 				end,
 			},
 			["DataStore_Stats_Weekly"] = {
@@ -342,7 +355,7 @@ DataStore:OnAddonLoaded(addonName, function()
 	thisCharacter = DataStore:GetCharacterDB("DataStore_Stats_Characters", true)
 end)
 
-DataStore:OnPlayerLogin(function() 
+AddonFactory:OnPlayerLogin(function() 
 	addon:ListenTo("PLAYER_ALIVE", function()
 		ScanStats()
 		
@@ -353,6 +366,7 @@ DataStore:OnPlayerLogin(function()
 		C_MythicPlus.RequestMapInfo()
 		
 		ScanRunHistory()
+		ClearAvailableRewards()
 	end)
 	addon:ListenTo("UNIT_INVENTORY_CHANGED", ScanStats)
 	addon:ListenTo("WEEKLY_REWARDS_UPDATE", function() 
