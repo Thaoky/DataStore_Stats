@@ -4,7 +4,7 @@
 
 ## Notes: Stores information about character statistics
 ## Author: Thaoky (EU-Marécages de Zangar)
-## Version: 2025.02.28
+## Version: 2025.08.21
 ## Dependencies: AddonFactory, DataStore
 ## SavedVariables: DataStore_Stats_Characters, DataStore_Stats_Weekly, DataStore_Stats_Dungeons
 ## X-Category: Interface Enhancements
