@@ -1,10 +1,10 @@
-## Interface: 110200
+## Interface: 110205
 ## Title: DataStore_Stats
 ## IconTexture: Interface\Icons\garrison_building_storehouse
 
 ## Notes: Stores information about character statistics
 ## Author: Thaoky (EU-Marécages de Zangar)
-## Version: 2025.08.21
+## Version: 2025.10.19
 ## Dependencies: AddonFactory, DataStore
 ## SavedVariables: DataStore_Stats_Characters, DataStore_Stats_Weekly, DataStore_Stats_Dungeons
 ## X-Category: Interface Enhancements
