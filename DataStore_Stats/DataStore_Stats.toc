@@ -1,4 +1,4 @@
-## Interface: 110205
+## Interface: 120000
 ## Title: DataStore_Stats
 ## IconTexture: Interface\Icons\garrison_building_storehouse
 
@@ -8,5 +8,17 @@
 ## Dependencies: AddonFactory, DataStore
 ## SavedVariables: DataStore_Stats_Characters, DataStore_Stats_Weekly, DataStore_Stats_Dungeons
 ## X-Category: Interface Enhancements
+
+## Category: Libraries
+## Category-deDE: Bibliotheken
+## Category-esES: Bibliotecas
+## Category-esMX: Bibliotecas
+## Category-frFR: Bibliothèques
+## Category-itIT: Librerie
+## Category-koKR: 라이브러리
+## Category-ptBR: Bibliotecas
+## Category-ruRU: Библиотеки
+## Category-zhCN: 函数库
+## Category-zhTW: 函式庫
 
 DataStore_Stats.lua
