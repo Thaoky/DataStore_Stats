@@ -15,6 +15,21 @@ local UnitRangedDamage, UnitRangedAttackPower, GetRangedCritChance, GetDodgeChan
 
 local C_ChallengeMode, C_MythicPlus, C_WeeklyRewards = C_ChallengeMode, C_MythicPlus, C_WeeklyRewards
 
+-- In WoW 12.0+ many Unit*/Get* stat APIs return secret values whose internal
+-- tostring / arithmetic raises ("invalid value (secret) ..." or "attempt to
+-- perform numeric conversion on a secret number value"). Run each section in
+-- a pcall so a single tainted block doesn't abort the whole AddonFactory
+-- callback - the previously stored value is kept on failure.
+local function SafePcall(fn)
+	local ok, err = pcall(fn)
+	-- swallow err; previously stored fields keep their last good value
+end
+
+local function SafeConcat(t, sep)
+	local ok, result = pcall(TableConcat, t, sep)
+	return ok and result or nil
+end
+
 -- *** Scanning functions ***
 local function SortByLevelDesc(a, b)
 	return a.level > b.level
@@ -22,70 +37,85 @@ end
 
 local function ScanStats()
 	local char = thisCharacter
-	
-	char.HealthMax = UnitHealthMax("player")
+
+	SafePcall(function()
+		char.HealthMax = UnitHealthMax("player")
+	end)
 	-- info on power types here : http://www.wowwiki.com/API_UnitPowerType
-	char.MaxPower = format("%d|%d", UnitPowerType("player"), UnitPowerMax("player"))
-	
+	SafePcall(function()
+		char.MaxPower = format("%d|%d", UnitPowerType("player"), UnitPowerMax("player"))
+	end)
+
 	local t = {}
 
 	-- *** Base ***
 	--	"strength | agility | stamina | intellect | spirit | armor"
-	for i = 1, 4 do
-		t[i] = UnitStat("player", i)
-		-- stat, effectiveStat, posBuff, negBuff = UnitStat("player", statIndex);
-	end
-	t[5] = UnitArmor("player")
-	char.Base = TableConcat(t, "|")
-	
+	SafePcall(function()
+		for i = 1, 4 do
+			t[i] = UnitStat("player", i)
+			-- stat, effectiveStat, posBuff, negBuff = UnitStat("player", statIndex);
+		end
+		t[5] = UnitArmor("player")
+		char.Base = SafeConcat(t, "|") or char.Base
+	end)
+
 	-- *** Melee ***
 	--	"Damage | Speed | Power | Hit rating | Crit chance | Expertise"
-	local minDmg, maxDmg = UnitDamage("player")
-	t[1] = format("%d-%d", floor(minDmg), ceil(maxDmg))	-- Damage "215-337"
-	t[2] = format("%.2f", UnitAttackSpeed("player"))
-	t[3] = UnitAttackPower("player")
-	t[4] = GetCombatRating(CR_HIT_MELEE)
-	t[5] = format("%.2f", GetCritChance())
-	t[6] = GetExpertise()
-	char.Melee = TableConcat(t, "|")
-	
+	SafePcall(function()
+		local minDmg, maxDmg = UnitDamage("player")
+		t[1] = format("%d-%d", floor(minDmg), ceil(maxDmg))	-- Damage "215-337"
+		t[2] = format("%.2f", UnitAttackSpeed("player"))
+		t[3] = UnitAttackPower("player")
+		t[4] = GetCombatRating(CR_HIT_MELEE)
+		t[5] = format("%.2f", GetCritChance())
+		t[6] = GetExpertise()
+		char.Melee = SafeConcat(t, "|") or char.Melee
+	end)
+
 	-- *** Ranged ***
 	--	"Damage | Speed | Power | Hit rating | Crit chance"
-	local speed
-	speed, minDmg, maxDmg = UnitRangedDamage("player")
-	t[1] = format("%d-%d", floor(minDmg), ceil(maxDmg))
-	t[2] = speed
-	t[3] = UnitRangedAttackPower("player")
-	t[4] = GetCombatRating(CR_HIT_RANGED)
-	t[5] = format("%.2f", GetRangedCritChance())
-	t[6] = nil
-	char.Ranged = TableConcat(t, "|")
-	
+	SafePcall(function()
+		local speed, minDmg, maxDmg = UnitRangedDamage("player")
+		t[1] = format("%d-%d", floor(minDmg), ceil(maxDmg))
+		t[2] = speed
+		t[3] = UnitRangedAttackPower("player")
+		t[4] = GetCombatRating(CR_HIT_RANGED)
+		t[5] = format("%.2f", GetRangedCritChance())
+		t[6] = nil
+		char.Ranged = SafeConcat(t, "|") or char.Ranged
+	end)
+
 	-- *** Spell ***
 	--	"+Damage | +Healing | Hit | Crit chance | Haste | Mana Regen"
-	t[1] = GetSpellBonusDamage(2)			-- 2, since 1 = physical damage
-	t[2] = GetSpellBonusHealing()
-	t[3] = GetCombatRating(CR_HIT_SPELL)
-	t[4] = format("%.2f", GetSpellCritChance(2))
-	t[5] = GetCombatRating(CR_HASTE_SPELL)
-	t[6] = floor(GetManaRegen() * 5.0)
-	char.Spell = TableConcat(t, "|")
-		
+	SafePcall(function()
+		t[1] = GetSpellBonusDamage(2)			-- 2, since 1 = physical damage
+		t[2] = GetSpellBonusHealing()
+		t[3] = GetCombatRating(CR_HIT_SPELL)
+		t[4] = format("%.2f", GetSpellCritChance(2))
+		t[5] = GetCombatRating(CR_HASTE_SPELL)
+		t[6] = floor(GetManaRegen() * 5.0)
+		char.Spell = SafeConcat(t, "|") or char.Spell
+	end)
+
 	-- *** Defense ***
 	--	"Armor | Defense | Dodge | Parry | Block | Resilience"
-	t[1] = UnitArmor("player")
-	t[2] = 0		-- UnitDefense("player")	deprecated in 8.0
-	t[3] = GetDodgeChance()
-	t[4] = format("%.2f", GetParryChance())
-	t[5] = format("%.2f", GetBlockChance())
-	t[6] = GetCombatRating(COMBAT_RATING_RESILIENCE_PLAYER_DAMAGE_TAKEN)
-	char.Defense = TableConcat(t, "|")
+	SafePcall(function()
+		t[1] = UnitArmor("player")
+		t[2] = 0		-- UnitDefense("player")	deprecated in 8.0
+		t[3] = GetDodgeChance()
+		t[4] = format("%.2f", GetParryChance())
+		t[5] = format("%.2f", GetBlockChance())
+		t[6] = GetCombatRating(COMBAT_RATING_RESILIENCE_PLAYER_DAMAGE_TAKEN)
+		char.Defense = SafeConcat(t, "|") or char.Defense
+	end)
 
 	-- *** PVP ***
 	--	"honorable kills | dishonorable kills"
-	wipe(t)
-	t[1], t[2] = GetPVPLifetimeStats()
-	char.PVP = TableConcat(t, "|")
+	SafePcall(function()
+		wipe(t)
+		t[1], t[2] = GetPVPLifetimeStats()
+		char.PVP = SafeConcat(t, "|") or char.PVP
+	end)
 	
 	-- *** Arena Teams ***
 	--[[
