@@ -15,6 +15,14 @@ local UnitRangedDamage, UnitRangedAttackPower, GetRangedCritChance, GetDodgeChan
 
 local C_ChallengeMode, C_MythicPlus, C_WeeklyRewards = C_ChallengeMode, C_MythicPlus, C_WeeklyRewards
 
+-- In WoW 12.0+ some Unit*/Get* APIs may return secret values that taint
+-- table.concat (the internal tostring fails). Wrap the concat so the scan
+-- degrades gracefully instead of erroring out the whole AddonFactory callback.
+local function SafeConcat(t, sep)
+	local ok, result = pcall(TableConcat, t, sep)
+	return ok and result or nil
+end
+
 -- *** Scanning functions ***
 local function SortByLevelDesc(a, b)
 	return a.level > b.level
@@ -36,7 +44,7 @@ local function ScanStats()
 		-- stat, effectiveStat, posBuff, negBuff = UnitStat("player", statIndex);
 	end
 	t[5] = UnitArmor("player")
-	char.Base = TableConcat(t, "|")
+	char.Base = SafeConcat(t, "|") or char.Base
 	
 	-- *** Melee ***
 	--	"Damage | Speed | Power | Hit rating | Crit chance | Expertise"
@@ -47,7 +55,7 @@ local function ScanStats()
 	t[4] = GetCombatRating(CR_HIT_MELEE)
 	t[5] = format("%.2f", GetCritChance())
 	t[6] = GetExpertise()
-	char.Melee = TableConcat(t, "|")
+	char.Melee = SafeConcat(t, "|") or char.Melee
 	
 	-- *** Ranged ***
 	--	"Damage | Speed | Power | Hit rating | Crit chance"
@@ -59,7 +67,7 @@ local function ScanStats()
 	t[4] = GetCombatRating(CR_HIT_RANGED)
 	t[5] = format("%.2f", GetRangedCritChance())
 	t[6] = nil
-	char.Ranged = TableConcat(t, "|")
+	char.Ranged = SafeConcat(t, "|") or char.Ranged
 	
 	-- *** Spell ***
 	--	"+Damage | +Healing | Hit | Crit chance | Haste | Mana Regen"
@@ -69,7 +77,7 @@ local function ScanStats()
 	t[4] = format("%.2f", GetSpellCritChance(2))
 	t[5] = GetCombatRating(CR_HASTE_SPELL)
 	t[6] = floor(GetManaRegen() * 5.0)
-	char.Spell = TableConcat(t, "|")
+	char.Spell = SafeConcat(t, "|") or char.Spell
 		
 	-- *** Defense ***
 	--	"Armor | Defense | Dodge | Parry | Block | Resilience"
@@ -79,13 +87,13 @@ local function ScanStats()
 	t[4] = format("%.2f", GetParryChance())
 	t[5] = format("%.2f", GetBlockChance())
 	t[6] = GetCombatRating(COMBAT_RATING_RESILIENCE_PLAYER_DAMAGE_TAKEN)
-	char.Defense = TableConcat(t, "|")
+	char.Defense = SafeConcat(t, "|") or char.Defense
 
 	-- *** PVP ***
 	--	"honorable kills | dishonorable kills"
 	wipe(t)
 	t[1], t[2] = GetPVPLifetimeStats()
-	char.PVP = TableConcat(t, "|")
+	char.PVP = SafeConcat(t, "|") or char.PVP
 	
 	-- *** Arena Teams ***
 	--[[
