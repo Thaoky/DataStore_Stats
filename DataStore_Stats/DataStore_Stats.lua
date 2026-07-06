@@ -14,6 +14,7 @@ local GetCombatRating, GetCritChance, GetExpertise, GetSpellBonusDamage, GetSpel
 local UnitRangedDamage, UnitRangedAttackPower, GetRangedCritChance, GetDodgeChance, GetParryChance, GetBlockChance = UnitRangedDamage, UnitRangedAttackPower, GetRangedCritChance, GetDodgeChance, GetParryChance, GetBlockChance
 
 local C_ChallengeMode, C_MythicPlus, C_WeeklyRewards = C_ChallengeMode, C_MythicPlus, C_WeeklyRewards
+local scanStatsQueued = false
 
 -- *** Scanning functions ***
 local function SortByLevelDesc(a, b)
@@ -22,6 +23,13 @@ end
 
 local function ScanStats()
 	local char = thisCharacter
+	if canaccessvalue and not canaccessvalue(UnitStat("player", 1)) then
+		if not scanStatsQueued then
+			scanStatsQueued = true
+			C_Timer.After(1.5, ScanStats)
+		end
+		return
+	end
 	
 	char.HealthMax = UnitHealthMax("player")
 	-- info on power types here : http://www.wowwiki.com/API_UnitPowerType
@@ -100,6 +108,7 @@ local function ScanStats()
 	
 	thisCharacter.hasRewards = C_WeeklyRewards.HasAvailableRewards()
 	thisCharacter.lastUpdate = time()
+	scanStatsQueued = false
 end
 
 local function GetWeekliesTable()
