@@ -136,7 +136,7 @@ local function ScanMythicPlusBestForMapInfo()
 	local char = thisCharacter
 	
 	-- Get the dungeons
-	local maps = C_ChallengeMode.GetMapTable()
+	local maps = nil; if C_ChallengeMode and C_ChallengeMode.GetMapTable then local ok, m = pcall(C_ChallengeMode.GetMapTable); if ok then maps = m end end
 	if not maps then return end
 
 	local bestTime = 999999
